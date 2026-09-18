@@ -48,10 +48,17 @@
           <button class="icon-button" id="checkHealth" type="button" title="Check health" aria-label="Check API health">↻</button>
         </div>
 
-        <label for="sampleSelect">Public sample case</label>
+        <label for="sampleSelect">Sample case</label>
         <div class="input-with-action sample-row">
-          <select id="sampleSelect" aria-label="Public sample case"></select>
+          <select id="sampleSelect" aria-label="Sample case"></select>
           <button class="secondary-button" id="loadSample" type="button">Load</button>
+        </div>
+
+        <div class="custom-actions" aria-label="Custom sample actions">
+          <button class="secondary-button" id="newCustom" type="button">＋ New custom</button>
+          <button class="secondary-button" id="importJson" type="button">⇧ Import JSON</button>
+          <button class="secondary-button" id="saveSample" type="button">♡ Save sample</button>
+          <input id="jsonFile" type="file" accept="application/json,.json" hidden>
         </div>
 
         <label for="payloadEditor">Request JSON</label>
