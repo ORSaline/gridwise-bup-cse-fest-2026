@@ -1,8 +1,6 @@
 const ui = {
-  apiBase: document.querySelector('#apiBase'), sampleSelect: document.querySelector('#sampleSelect'),
-  loadSample: document.querySelector('#loadSample'), payload: document.querySelector('#payloadEditor'),
-  newCustom: document.querySelector('#newCustom'), importJson: document.querySelector('#importJson'),
-  saveSample: document.querySelector('#saveSample'), jsonFile: document.querySelector('#jsonFile'),
+  apiBase: document.querySelector('#apiBase'), payload: document.querySelector('#payloadEditor'),
+  importJson: document.querySelector('#importJson'), jsonFile: document.querySelector('#jsonFile'),
   run: document.querySelector('#runOptimization'), checkHealth: document.querySelector('#checkHealth'),
   status: document.querySelector('#systemStatus'), statusText: document.querySelector('#statusText'),
   payloadState: document.querySelector('#payloadState'), charCount: document.querySelector('#charCount'),
@@ -18,14 +16,6 @@ const ui = {
 let cases = [];
 let currentRequest = null;
 let currentResult = null;
-let userSamples = readUserSamples();
-
-function readUserSamples() {
-  try {
-    const saved = JSON.parse(localStorage.getItem('gridwise-user-samples') || '[]');
-    return Array.isArray(saved) ? saved : [];
-  } catch (_) { return []; }
-}
 
 const number = (value, digits = 1) => new Intl.NumberFormat('en-US', { maximumFractionDigits: digits }).format(Number(value));
 const esc = value => String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -67,50 +57,9 @@ async function loadCasePack() {
     if (!response.ok) throw new Error('Sample pack unavailable');
     const pack = await response.json();
     cases = pack.cases || [];
-    refreshSampleOptions();
-    if (cases.length) loadSelectedCase();
-  } catch (error) {
-    ui.sampleSelect.innerHTML = '<option>Sample pack unavailable</option>';
-    ui.payloadState.textContent = error.message;
-    ui.payloadState.className = 'invalid';
+  } catch (_) {
+    cases = [];
   }
-}
-
-function refreshSampleOptions() {
-  const official = cases.map((item, index) => `<option value="official:${index}">${esc(item.id)} · ${esc(item.label)}</option>`).join('');
-  const custom = userSamples.length
-    ? `<optgroup label="My saved samples">${userSamples.map((item,index)=>`<option value="user:${index}">${esc(item.scenario_id || `Custom ${index+1}`)}</option>`).join('')}</optgroup>`
-    : '';
-  ui.sampleSelect.innerHTML = `<optgroup label="Official samples">${official}</optgroup>${custom}`;
-}
-
-function loadSelectedCase() {
-  const [kind, rawIndex] = ui.sampleSelect.value.split(':');
-  const index = Number(rawIndex) || 0;
-  const selected = kind === 'user' ? {input:userSamples[index]} : cases[index];
-  if (!selected) return;
-  currentRequest = selected.input;
-  ui.payload.value = JSON.stringify(selected.input, null, 2);
-  updatePayloadState();
-  if (selected.expected_output) renderResult(selected.expected_output, selected.input, 'Reference preview');
-  else clearResult(selected.input.scenario_id || 'Custom scenario');
-  toast(`${selected.input.scenario_id || 'Custom sample'} loaded`);
-}
-
-function createCustomScenario() {
-  const solar = [0,0,0,0,0,0,5,15,35,60,85,105,115,110,90,60,30,10,0,0,0,0,0,0];
-  const tariff = [6,6,5,5,5,6,8,10,12,14,16,16,15,14,13,14,18,22,28,30,26,18,10,7];
-  const custom = {
-    scenario_id: `CUSTOM-${Date.now().toString().slice(-6)}`,
-    operator_notes: ['Describe one scheduling instruction here.'],
-    hours: Array.from({length:24}, (_,hour)=>({hour,demand_kwh:100,solar_kwh:solar[hour],tariff_bdt_per_kwh:tariff[hour]})),
-    battery: {capacity_kwh:200,initial_energy_kwh:100,minimum_energy_kwh:30,max_charge_kwh_per_hour:50,max_discharge_kwh_per_hour:50}
-  };
-  ui.payload.value = JSON.stringify(custom,null,2);
-  updatePayloadState();
-  clearResult(custom.scenario_id);
-  ui.payload.focus();
-  toast('Custom scenario created. Edit any value, then run it.');
 }
 
 async function importJsonFile(event) {
@@ -132,21 +81,9 @@ async function importJsonFile(event) {
   }
 }
 
-function saveCurrentSample() {
-  try {
-    const request = JSON.parse(ui.payload.value);
-    if (!request.scenario_id || !Array.isArray(request.hours) || request.hours.length !== 24) throw new Error('A scenario_id and 24 hours are required');
-    const existing = userSamples.findIndex(item=>item.scenario_id===request.scenario_id);
-    if (existing >= 0) userSamples[existing] = request; else userSamples.push(request);
-    localStorage.setItem('gridwise-user-samples', JSON.stringify(userSamples));
-    refreshSampleOptions();
-    ui.sampleSelect.value = `user:${existing >= 0 ? existing : userSamples.length-1}`;
-    toast(`${request.scenario_id} saved on this device`);
-  } catch (error) { toast(`Cannot save sample: ${error.message}`, true); }
-}
-
 function clearResult(title) {
   currentResult = null;
+  ui.resultsPanel.hidden = true;
   ui.scenarioTitle.textContent = title;
   ui.resultSource.textContent = 'Custom input';
   [ui.totalCost,ui.totalGrid,ui.peakGrid,ui.batteryReturn].forEach(item=>item.textContent='—');
@@ -164,9 +101,12 @@ function updatePayloadState() {
     currentRequest = JSON.parse(ui.payload.value);
     ui.payloadState.textContent = 'Valid JSON';
     ui.payloadState.className = 'valid';
+    ui.run.disabled = false;
   } catch (_) {
+    currentRequest = null;
     ui.payloadState.textContent = 'Invalid JSON';
     ui.payloadState.className = 'invalid';
+    ui.run.disabled = true;
   }
 }
 
@@ -211,6 +151,7 @@ async function runOptimization() {
 
 function renderResult(result, request, source) {
   currentResult = result;
+  ui.resultsPanel.hidden = false;
   ui.scenarioTitle.textContent = result.scenario_id || request.scenario_id || 'Scenario result';
   ui.resultSource.textContent = source;
   ui.totalCost.textContent = number(result.total_cost_bdt, 2);
@@ -327,12 +268,8 @@ function downloadResult() {
   const link = document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=`${currentResult.scenario_id || 'gridwise'}-result.json`; link.click(); URL.revokeObjectURL(link.href);
 }
 
-ui.loadSample.addEventListener('click', loadSelectedCase);
-ui.sampleSelect.addEventListener('change', loadSelectedCase);
-ui.newCustom.addEventListener('click', createCustomScenario);
 ui.importJson.addEventListener('click', ()=>ui.jsonFile.click());
 ui.jsonFile.addEventListener('change', importJsonFile);
-ui.saveSample.addEventListener('click', saveCurrentSample);
 ui.payload.addEventListener('input', updatePayloadState);
 ui.run.addEventListener('click', runOptimization);
 ui.checkHealth.addEventListener('click', checkHealth);
