@@ -6,7 +6,7 @@ GridWise is a complete BUP CSE Fest 2026 preliminary-round submission: a public 
 
 - `GET /health` with the exact `{"status":"ok"}` response.
 - `POST /optimize-energy` with the canonical request and response field names.
-- Batched OpenAI-compatible LLM call for 1-3 operator notes.
+- Batched native Gemini `generateContent` call for 1-3 operator notes.
 - One corrective retry plus a controlled `no_op` fallback on model/provider failure.
 - Deterministic validation of note mapping, directive type, hours, numeric ranges, and `applies` semantics.
 - SciPy HiGHS LP model covering hourly balance, solar curtailment, battery bounds/rates, directive constraints, and end-of-day neutrality.
@@ -20,7 +20,7 @@ GridWise is a complete BUP CSE Fest 2026 preliminary-round submission: a public 
 Operator notes + battery capacity
            |
            v
-OpenAI-compatible LLM (one batched call, temperature 0)
+Gemini native API (one batched call, temperature 0)
            |
            v
 Deterministic guardrail (repair, validate, safe fallback)
@@ -109,8 +109,8 @@ Time windows are start-inclusive and end-exclusive: 1 PM to 3 PM becomes `[13,14
 | Variable | Purpose | Default |
 |---|---|---|
 | `LLM_API_KEY` | Provider credential | empty |
-| `LLM_BASE_URL` | OpenAI-compatible API base URL | Gemini OpenAI-compatible endpoint |
-| `LLM_MODEL` | Provider model identifier | `gemini-2.5-flash` |
+| `LLM_BASE_URL` | Gemini native API base URL | `https://generativelanguage.googleapis.com/v1beta` |
+| `LLM_MODEL` | Gemini model identifier | `gemini-3.1-flash-lite` |
 | `LLM_TIMEOUT_S` | Timeout per LLM attempt | `10` |
 | `LLM_MAX_RETRIES` | Total model attempts | `2` |
 | `LLM_STUB` | Explicit local no-model fallback | `0` |

@@ -12,9 +12,9 @@ services:
       - key: LLM_API_KEY
         sync: false
       - key: LLM_BASE_URL
-        value: https://generativelanguage.googleapis.com/v1beta/openai/
+        value: https://generativelanguage.googleapis.com/v1beta
       - key: LLM_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.1-flash-lite
       - key: LLM_TIMEOUT_S
         value: "10"
       - key: LLM_MAX_RETRIES

@@ -1,3 +1,6 @@
+from types import SimpleNamespace
+
+import app.llm as llm
 from app.llm import _extract_json_array, _normalize
 
 
@@ -35,3 +38,98 @@ def test_semantic_validation_rejects_out_of_range_factor():
             }
         ]
     )
+
+
+def test_native_gemini_request_and_response(monkeypatch):
+    captured = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {"text": '[{"directive_type":"no_op",'},
+                                {"text": '"structured_adjustment":null}]'},
+                            ]
+                        }
+                    }
+                ]
+            }
+
+    class FakeClient:
+        def __init__(self, timeout):
+            captured["timeout"] = timeout
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def post(self, url, headers, json):
+            captured.update(url=url, headers=headers, payload=json)
+            return FakeResponse()
+
+    monkeypatch.setattr(
+        llm,
+        "settings",
+        SimpleNamespace(
+            llm_base_url="https://generativelanguage.googleapis.com/v1beta/",
+            llm_model="gemini-3.1-flash-lite",
+            llm_api_key="test-key",
+            llm_timeout_s=10,
+        ),
+    )
+    monkeypatch.setattr(llm.httpx, "Client", FakeClient)
+
+    result = llm._call_llm("Interpret this note")
+
+    assert result == '[{"directive_type":"no_op","structured_adjustment":null}]'
+    assert captured["url"].endswith(
+        "/models/gemini-3.1-flash-lite:generateContent"
+    )
+    assert captured["headers"]["X-goog-api-key"] == "test-key"
+    assert "Authorization" not in captured["headers"]
+    assert captured["payload"]["systemInstruction"]["parts"][0]["text"]
+    assert captured["payload"]["contents"][0]["parts"][0]["text"] == (
+        "Interpret this note"
+    )
+    assert captured["payload"]["generationConfig"] == {
+        "temperature": 0,
+        "maxOutputTokens": 1200,
+        "responseMimeType": "application/json",
+    }
+
+
+def test_native_gemini_rejects_empty_candidates(monkeypatch):
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"candidates": []}
+
+    class FakeClient:
+        def __init__(self, timeout):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def post(self, url, headers, json):
+            return FakeResponse()
+
+    monkeypatch.setattr(llm.httpx, "Client", FakeClient)
+
+    import pytest
+
+    with pytest.raises(ValueError, match="no candidates"):
+        llm._call_llm("Interpret this note")

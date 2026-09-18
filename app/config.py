@@ -34,9 +34,9 @@ class Settings:
             llm_api_key=os.getenv("LLM_API_KEY", "").strip(),
             llm_base_url=os.getenv(
                 "LLM_BASE_URL",
-                "https://generativelanguage.googleapis.com/v1beta/openai/",
+                "https://generativelanguage.googleapis.com/v1beta",
             ).strip(),
-            llm_model=os.getenv("LLM_MODEL", "gemini-2.5-flash").strip(),
+            llm_model=os.getenv("LLM_MODEL", "gemini-3.1-flash-lite").strip(),
             llm_timeout_s=float(os.getenv("LLM_TIMEOUT_S", "10")),
             llm_max_retries=max(1, int(os.getenv("LLM_MAX_RETRIES", "2"))),
             llm_stub=_env_bool("LLM_STUB", False),

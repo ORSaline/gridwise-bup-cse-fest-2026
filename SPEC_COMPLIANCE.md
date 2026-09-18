@@ -4,7 +4,7 @@ This document maps the supplied GridWise requirements to the implementation and 
 
 ## 1. LLM directive interpretation
 
-- Production interpretation uses an OpenAI-compatible LLM call in `app/llm.py`.
+- Production interpretation uses Gemini's native `generateContent` API in `app/llm.py`.
 - All operator notes are sent in one batch call.
 - Only the six allowed directive types are accepted.
 - Time windows are start-inclusive and end-exclusive.

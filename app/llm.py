@@ -104,19 +104,30 @@ def _semantically_valid(items: list[dict[str, Any]]) -> bool:
     return True
 
 def _call_llm(user_prompt: str) -> str:
-    """Make one OpenAI-compatible chat-completions request."""
-    url = settings.llm_base_url.rstrip("/") + "/chat/completions"
+    """Make one native Gemini generateContent request."""
+    url = (
+        settings.llm_base_url.rstrip("/")
+        + f"/models/{settings.llm_model}:generateContent"
+    )
     headers = {
-        "Authorization": f"Bearer {settings.llm_api_key}",
+        "X-goog-api-key": settings.llm_api_key,
         "Content-Type": "application/json",
     }
     payload = {
-        "model": settings.llm_model,
-        "temperature": 0,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
+        "systemInstruction": {
+            "parts": [{"text": SYSTEM_PROMPT}],
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": user_prompt}],
+            },
         ],
+        "generationConfig": {
+            "temperature": 0,
+            "maxOutputTokens": 1200,
+            "responseMimeType": "application/json",
+        },
     }
 
     timeout = httpx.Timeout(settings.llm_timeout_s)
@@ -125,9 +136,20 @@ def _call_llm(user_prompt: str) -> str:
         response.raise_for_status()
         data = response.json()
 
-    content = data["choices"][0]["message"]["content"]
-    if not isinstance(content, str):
-        raise ValueError("LLM response content is not text")
+    candidates = data.get("candidates", [])
+    if not isinstance(candidates, list) or not candidates:
+        raise ValueError("Gemini response contains no candidates")
+
+    parts = candidates[0].get("content", {}).get("parts", [])
+    if not isinstance(parts, list):
+        raise ValueError("Gemini response parts are malformed")
+    content = "".join(
+        part.get("text", "")
+        for part in parts
+        if isinstance(part, dict) and isinstance(part.get("text", ""), str)
+    ).strip()
+    if not content:
+        raise ValueError("Gemini response contains no text")
     return content
 
 

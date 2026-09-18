@@ -27,8 +27,8 @@ Configure these in the hosting platform, not in the repository:
 
 ```text
 LLM_API_KEY=<secret>
-LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
-LLM_MODEL=gemini-2.5-flash
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta
+LLM_MODEL=gemini-3.1-flash-lite
 LLM_TIMEOUT_S=10
 LLM_MAX_RETRIES=2
 LLM_STUB=0
