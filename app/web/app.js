@@ -44,6 +44,10 @@ function setHealth(ok, label) {
 }
 
 async function checkHealth() {
+  if (!ui.apiBase.value.trim()) {
+    setHealth(true, 'Browser optimizer ready');
+    return true;
+  }
   setHealth(false, 'Checking optimizer');
   try {
     const response = await fetch(endpoint('/health'), { signal: AbortSignal.timeout(5000) });
@@ -175,14 +179,26 @@ async function runOptimization() {
   ui.run.querySelector('span').textContent = 'Optimizing…';
   ui.resultsPanel.setAttribute('aria-busy', 'true');
   try {
-    const response = await fetch(endpoint('/optimize-energy'), {
-      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(request)
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
-    renderResult(result, request, 'Live API result');
-    setHealth(true, 'Optimizer online');
-    toast('Optimization completed and replay-checked.');
+    const apiBase = ui.apiBase.value.trim();
+    if (!apiBase) {
+      const result = GridWiseBrowserOptimizer.optimize(request, cases);
+      renderResult(result, request, 'Browser optimizer result');
+      setHealth(true, 'Browser optimizer ready');
+      toast('Optimization completed in this browser and replay-checked.');
+    } else {
+      const response = await fetch(endpoint('/optimize-energy'), {
+        method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(request)
+      });
+      const raw = await response.text();
+      let result = null;
+      try { result = raw ? JSON.parse(raw) : null; }
+      catch (_) { throw new Error(`API returned invalid JSON (HTTP ${response.status}).`); }
+      if (!response.ok) throw new Error(result?.detail || result?.error || `HTTP ${response.status}`);
+      if (!result) throw new Error('API returned an empty response.');
+      renderResult(result, request, 'Live API result');
+      setHealth(true, 'Optimizer online');
+      toast('Optimization completed and replay-checked.');
+    }
   } catch (error) {
     toast(`Optimization failed: ${typeof error.message === 'string' ? error.message : 'unknown error'}`, true);
     setHealth(false, 'API needs attention');
