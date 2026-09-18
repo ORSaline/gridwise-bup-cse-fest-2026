@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: gridwise
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        value: https://generativelanguage.googleapis.com/v1beta/openai/
+      - key: LLM_MODEL
+        value: gemini-2.5-flash
+      - key: LLM_TIMEOUT_S
+        value: "10"
+      - key: LLM_MAX_RETRIES
+        value: "2"
+      - key: LLM_STUB
+        value: "0"
+      - key: LOG_LEVEL
+        value: INFO

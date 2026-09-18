@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="GridWise control room for LLM-assisted campus energy optimization.">
+  <title>GridWise Control Room</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23080d13'/%3E%3Cpath d='M35 7 16 35h14l-2 22 20-31H34z' fill='%23d5ff40'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/web/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#workspace" aria-label="GridWise home">
+      <span class="brand-mark" aria-hidden="true">ϟ</span>
+      <span>GRIDWISE</span>
+      <small>CONTROL ROOM / 24H</small>
+    </a>
+    <div class="system-status" id="systemStatus" role="status">
+      <span class="pulse"></span>
+      <span id="statusText">Checking optimizer</span>
+    </div>
+    <nav aria-label="Primary">
+      <a href="#workspace">Workspace</a>
+      <a href="#schedule">Schedule</a>
+      <a href="/docs" target="_blank" rel="noreferrer">API docs ↗</a>
+    </nav>
+  </header>
+
+  <main id="workspace">
+    <section class="intro" aria-labelledby="pageTitle">
+      <div>
+        <p class="eyebrow">SMART CAMPUS ENERGY OPERATIONS</p>
+        <h1 id="pageTitle">Turn operator notes into the least-cost valid schedule.</h1>
+      </div>
+      <p class="intro-copy">One request flows through language interpretation, deterministic guardrails, and a linear-programming optimizer. Every result below is replayable hour by hour.</p>
+    </section>
+
+    <section class="workbench">
+      <aside class="control-panel" aria-label="Scenario controls">
+        <div class="panel-heading">
+          <span class="step">01</span>
+          <div><p>Scenario input</p><span>Exact judge contract</span></div>
+        </div>
+
+        <label for="apiBase">API base URL</label>
+        <div class="input-with-action">
+          <input id="apiBase" type="url" placeholder="Same origin" autocomplete="url">
+          <button class="icon-button" id="checkHealth" type="button" title="Check health" aria-label="Check API health">↻</button>
+        </div>
+
+        <label for="sampleSelect">Public sample case</label>
+        <div class="input-with-action sample-row">
+          <select id="sampleSelect" aria-label="Public sample case"></select>
+          <button class="secondary-button" id="loadSample" type="button">Load</button>
+        </div>
+
+        <label for="payloadEditor">Request JSON</label>
+        <textarea id="payloadEditor" spellcheck="false" aria-describedby="payloadHint"></textarea>
+        <p class="field-hint" id="payloadHint"><span id="payloadState">Waiting for sample</span><span id="charCount">0 chars</span></p>
+
+        <button class="run-button" id="runOptimization" type="button">
+          <span>Run optimization</span><span aria-hidden="true">→</span>
+        </button>
+
+        <div class="pipeline" aria-label="Processing pipeline">
+          <div><span>1</span><p>LLM interpretation<small>Natural language → directives</small></p></div>
+          <div><span>2</span><p>Guardrail validation<small>Shape, ranges, note mapping</small></p></div>
+          <div><span>3</span><p>LP optimization<small>Minimum cost, hard constraints</small></p></div>
+        </div>
+      </aside>
+
+      <section class="results-panel" aria-live="polite" aria-busy="false">
+        <div class="results-toolbar">
+          <div>
+            <p class="eyebrow">LIVE RESULT</p>
+            <h2 id="scenarioTitle">No scenario loaded</h2>
+          </div>
+          <div class="source-pill" id="resultSource">—</div>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric accent-lime"><p>Total cost</p><strong id="totalCost">—</strong><span>BDT / day</span></article>
+          <article class="metric accent-cyan"><p>Grid energy</p><strong id="totalGrid">—</strong><span>kWh imported</span></article>
+          <article class="metric accent-orange"><p>Peak grid</p><strong id="peakGrid">—</strong><span>kWh / hour</span></article>
+          <article class="metric"><p>Battery return</p><strong id="batteryReturn">—</strong><span>hour 23 neutrality</span></article>
+        </div>
+
+        <article class="chart-card">
+          <div class="card-title-row">
+            <div><p>24-hour dispatch</p><span>Grid, solar, and battery state</span></div>
+            <div class="legend"><i class="grid-key"></i>Grid <i class="solar-key"></i>Solar <i class="battery-key"></i>Battery</div>
+          </div>
+          <div id="dispatchChart" class="chart" role="img" aria-label="Hourly grid, solar, and battery energy chart">
+            <div class="empty-state">Load a sample or run a request to see the dispatch curve.</div>
+          </div>
+        </article>
+
+        <div class="detail-grid">
+          <article class="directive-card">
+            <div class="card-title-row">
+              <div><p>Interpreted directives</p><span>One entry per operator note</span></div>
+              <span class="count-badge" id="directiveCount">0</span>
+            </div>
+            <div id="directiveList" class="directive-list"><div class="empty-state compact">No directives yet.</div></div>
+          </article>
+
+          <article class="validation-card">
+            <div class="card-title-row"><div><p>Replay checks</p><span>Deterministic validity scan</span></div><span class="shield">✓</span></div>
+            <ul id="validationList" class="validation-list">
+              <li><span>○</span> Awaiting a schedule</li>
+            </ul>
+          </article>
+        </div>
+
+        <article class="schedule-card" id="schedule">
+          <div class="card-title-row">
+            <div><p>Hourly schedule</p><span>Machine-checkable source of truth</span></div>
+            <button class="secondary-button" id="downloadResult" type="button" disabled>Download JSON</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Hour</th><th>Grid</th><th>Solar</th><th>Battery action</th><th>Battery kWh</th><th>Energy after</th></tr></thead>
+              <tbody id="scheduleBody"><tr><td colspan="6" class="empty-cell">No schedule available.</td></tr></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/web/app.js" defer></script>
+</body>
+</html>
