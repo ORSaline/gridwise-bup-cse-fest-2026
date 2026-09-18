@@ -14,6 +14,7 @@ from app import llm as llm_module
 from app import optimizer as optimizer_module
 from app.errors import register_error_handlers
 from app.logging import configure_logging
+from app.replay import replay_and_measure
 from app.schemas import DirectiveInterpretation, HourlyPlan, OptimizeRequest, OptimizeResponse
 
 configure_logging()
@@ -46,14 +47,6 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-def _recalculate_totals(plan: list[HourlyPlan], hours_payload: list[dict]) -> tuple[float, float, float]:
-    tariff = {int(row["hour"]): float(row["tariff_bdt_per_kwh"]) for row in hours_payload}
-    total_grid = sum(row.grid_kwh for row in plan)
-    total_cost = sum(row.grid_kwh * tariff[row.hour] for row in plan)
-    peak_grid = max(row.grid_kwh for row in plan)
-    return round(total_grid, 3), round(total_cost, 3), round(peak_grid, 3)
-
-
 def _build_summary(scenario_id: str, total_cost: float, total_grid: float, peak_grid: float) -> str:
     return (
         f"{scenario_id}: minimum-cost 24-hour plan uses {total_grid:g} kWh from the grid, "
@@ -68,9 +61,15 @@ def optimize_energy(req: OptimizeRequest) -> OptimizeResponse:
     raw = llm_module.interpret_notes(req.operator_notes, req.battery.capacity_kwh)
     directives = guardrail_module.validate(raw, len(req.operator_notes), req.battery.capacity_kwh)
     hours_payload = [row.model_dump() for row in req.hours]
-    optimized = optimizer_module.optimize(hours_payload, req.battery.model_dump(), directives)
+    battery_payload = req.battery.model_dump()
+    optimized = optimizer_module.optimize(hours_payload, battery_payload, directives)
     plan = [HourlyPlan(**row) for row in optimized["hourly_plan"]]
-    total_grid, total_cost, peak_grid = _recalculate_totals(plan, hours_payload)
+    total_grid, total_cost, peak_grid = replay_and_measure(
+        hours_payload,
+        battery_payload,
+        directives,
+        [row.model_dump() for row in plan],
+    )
     return OptimizeResponse(
         scenario_id=req.scenario_id,
         directive_interpretation=[DirectiveInterpretation(**row) for row in directives],

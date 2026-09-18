@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -8,6 +11,13 @@ from tests.test_api import payload
 def test_official_schema_is_accepted():
     request = OptimizeRequest.model_validate(payload())
     assert request.hours[0].solar_kwh == 0
+
+
+def test_curl_ready_sample_request_is_accepted():
+    sample_path = Path(__file__).parents[1] / "samples" / "sample_request.json"
+    request = OptimizeRequest.model_validate(json.loads(sample_path.read_text(encoding="utf-8")))
+    assert request.scenario_id == "GRIDWISE-DEMO-01"
+    assert len(request.hours) == 24
 
 
 def test_duplicate_hour_and_blank_note_are_rejected():

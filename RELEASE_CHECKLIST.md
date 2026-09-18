@@ -17,6 +17,6 @@ Run these checks before submission.
 - [ ] Run the Docker image and test `/health` from the host.
 - [ ] Confirm no API key is present in tracked files or Git history.
 - [ ] Deploy and test from an external network.
-- [ ] Open `/` and verify the dashboard loads, sample preview renders, and a live request completes.
+- [ ] Open `/` and verify the dashboard starts empty, accepts `samples/sample_request.json`, and reveals results only after optimization.
 - [ ] Confirm the container image is pullable from GHCR.
 - [ ] Keep the contest repository private during the event and change visibility only when the event rules permit it.

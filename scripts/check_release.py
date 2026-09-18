@@ -7,9 +7,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = [
     "app/main.py", "app/schemas.py", "app/llm.py", "app/prompts.py", "app/guardrail.py",
-    "app/optimizer.py", "app/web/index.html", "app/web/styles.css", "app/web/app.js",
-    "samples/official_public_cases.json", "requirements.txt", "Dockerfile", ".env.example",
-    ".gitignore", ".github/workflows/docker.yml", "README.md",
+    "app/optimizer.py", "app/replay.py", "app/web/index.html", "app/web/styles.css", "app/web/app.js",
+    "samples/sample_request.json", "samples/official_public_cases.json", "requirements.txt", "Dockerfile", ".env.example",
+    ".gitignore", ".github/workflows/docker.yml", "README.md", "SUBMISSION_INFO.template.md",
 ]
 TEXT_SUFFIXES = {".py", ".md", ".txt", ".json", ".yaml", ".yml", ".example", ".html", ".css", ".js"}
 SECRET_PATTERNS = [

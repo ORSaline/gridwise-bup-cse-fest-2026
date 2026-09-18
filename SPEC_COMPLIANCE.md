@@ -39,9 +39,9 @@ Verification: `tests/test_guardrail.py`.
 - Overlapping reserves use the maximum.
 - Overlapping grid caps use the minimum.
 - Charge/discharge prohibition windows form unions.
-- The returned plan is replay-verified before it leaves the optimizer.
+- The returned plan is verified inside the optimizer and then independently replayed by `app/replay.py` before the API responds.
 
-Verification: `tests/test_optimizer.py`, including all ten official optimal reference costs.
+Verification: `tests/test_optimizer.py`, `tests/test_replay.py`, including all ten official optimal reference costs and deliberate plan-tampering tests.
 
 ## 4. Public API contract
 
@@ -79,4 +79,4 @@ Verification: `tests/test_api.py`, `tests/test_api_errors.py`, `tests/test_schem
 - total grid, total cost, and peak-grid consistency;
 - reference total cost when an `expected_output.total_cost_bdt` value is present.
 
-The exact organizer-provided case pack is included at `samples/official_public_cases.json` and is also used by the dashboard sample picker.
+The exact organizer-provided case pack is included at `samples/official_public_cases.json`. A single curl-ready request is included at `samples/sample_request.json`; the upload-first dashboard intentionally preloads no scenario or result.
